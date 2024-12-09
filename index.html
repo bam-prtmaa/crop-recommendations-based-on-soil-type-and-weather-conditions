@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rekomendasi Tanaman Cerdas</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        :root {
+            --primary-color: #2E7D32;
+            --secondary-color: #81C784;
+            --background-color: #E8F5E9;
+            --text-color: #1B5E20;
+            --card-background: rgba(255, 255, 255, 0.9);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--background-color) 0%, #C8E6C9 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-attachment: fixed;
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-background);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .container:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        h1 i {
+            margin-right: 15px;
+            color: var(--secondary-color);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--secondary-color);
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background-color: white;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
+        }
+
+        #map {
+            height: 300px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            border: 2px solid var(--secondary-color);
+        }
+
+        .gps-btn {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gps-btn:hover {
+            background-color: var(--primary-color);
+        }
+
+        .gps-btn i {
+            margin-right: 10px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            background-color: var(--text-color);
+            transform: scale(1.02);
+        }
+
+        .btn i {
+            margin-left: 10px;
+        }
+
+        #result {
+            margin-top: 30px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        #result.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .result-card {
+            background-color: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border-left: 5px solid var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .result-card h3 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .result-card p {
+            margin-bottom: 5px;
+        }
+
+        .error {
+            color: #D32F2F;
+            border-left-color: #D32F2F;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                width: 95%;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-leaf"></i>Rekomendasi Tanaman</h1>
+        
+        <button type="button" class="gps-btn" id="gpsButton">
+            <i class="fas fa-map-marker-alt"></i> Gunakan Lokasi GPS Saya
+        </button>
+
+        <div id="map"></div>
+        
+        <form id="rekomendasiForm">
+            <div class="form-group">
+                <label for="latitude"><i class="fas fa-map-marker-alt"></i> Latitude</label>
+                <input type="text" id="latitude" name="latitude" placeholder="Latitude" readonly required>
+            </div>
+            
+            <div class="form-group">
+                <label for="longitude"><i class="fas fa-map-marker-alt"></i> Longitude</label>
+                <input type="text" id="longitude" name="longitude" placeholder="Longitude" readonly required>
+            </div>
+            
+            <div class="form-group">
+                <label for="jenis_tanah"><i class="fas fa-mountain"></i> Jenis Tanah</label>
+                <select id="jenis_tanah" name="jenis_tanah" required>
+                    <option value="">Pilih Jenis Tanah</option>
+                    <option value="Andosol">Andosol</option>
+                    <option value="Vulkanik">Vulkanik</option>
+                    <option value="Lempung">Lempung</option>
+                    <option value="Alluvial">Alluvial</option>
+                    <option value="Alfisol">Alfisol</option>
+                    <option value="Podsolik">Podsolik</option>
+                    <option value="Ultisol">Ultisol</option>
+                    <option value="Entisol">Entisol</option>
+                    <option value="Inceptisol">Inceptisol</option>
+                    <option value="Mollisol">Mollisol</option>
+                    <option value="Latosol">Latosol</option>
+                    <option value="PodsolikMerahKuning">Podsolik Merah Kuning</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn">
+                Dapatkan Rekomendasi <i class="fas fa-search"></i>
+            </button>
+        </form>
+        <div id="result"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Initialize map centered on Indonesia
+        const map = L.map('map').setView([-2.548926, 118.0057528], 5);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Marker to show selected location
+        const marker = L.marker([-2.548926, 118.0057528], {
+            draggable: true
+        }).addTo(map);
+
+        // Update latitude and longitude inputs when marker is dragged
+        marker.on('dragend', function(event) {
+            const latlng = event.target.getLatLng();
+            document.getElementById('latitude').value = latlng.lat.toFixed(6);
+            document.getElementById('longitude').value = latlng.lng.toFixed(6);
+        });
+
+        // Handle map click to update marker position
+        map.on('click', function(e) {
+            marker.setLatLng(e.latlng);
+            document.getElementById('latitude').value = e.latlng.lat.toFixed(6);
+            document.getElementById('longitude').value = e.latlng.lng.toFixed(6);
+        });
+
+        // GPS Location Button Functionality
+        document.getElementById('gpsButton').addEventListener('click', function() {
+            // Disable button during location retrieval
+            const gpsButton = this;
+            gpsButton.disabled = true;
+            gpsButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mencari Lokasi...';
+
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        // Success callback
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+
+                        // Update map marker and inputs
+                        marker.setLatLng([lat, lng]);
+                        map.setView([lat, lng], 10);
+                        
+                        document.getElementById('latitude').value = lat.toFixed(6);
+                        document.getElementById('longitude').value = lng.toFixed(6);
+
+                        // Re-enable button
+                        gpsButton.disabled = false;
+                        gpsButton.innerHTML = '<i class="fas fa-map-marker-alt"></i> Gunakan Lokasi GPS Saya';
+
+                    },
+                    function(error) {
+                        // Error callback
+                        let errorMessage = 'Gagal mendapatkan lokasi. ';
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage += "Izin lokasi ditolak.";
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage += "Informasi lokasi tidak tersedia.";
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage += "Waktu permintaan lokasi habis.";
+                                break;
+                            default:
+                                errorMessage += "Kesalahan tidak diketahui.";
+                        }
+
+                        // Re-enable button
+                        gpsButton.disabled = false;
+                        gpsButton.innerHTML = '<i class="fas fa-map-marker-alt"></i> Gunakan Lokasi GPS Saya';
+
+                        // Show error
+                        alert(errorMessage);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                alert('Geolokasi tidak didukung di peramban Anda.');
+                gpsButton.disabled = false;
+                gpsButton.innerHTML = '<i class="fas fa-map-marker-alt"></i> Gunakan Lokasi GPS Saya';
+            }
+        });
+
+        // Form submission script (unchanged from previous version)
+        document.getElementById('rekomendasiForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const submitButton = document.querySelector('.btn');
+            const resultDiv = document.getElementById('result');
+            
+            // Disable button and show loading
+            submitButton.innerHTML = 'Mencari Rekomendasi... <i class="fas fa-spinner fa-spin"></i>';
+            submitButton.disabled = true;
+            resultDiv.innerHTML = '';
+            resultDiv.classList.remove('show');
+
+            const formData = new FormData(this);
+            fetch('/rekomendasi', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                setTimeout(() => {
+                    // Re-enable button
+                    submitButton.innerHTML = 'Dapatkan Rekomendasi <i class="fas fa-search"></i>';
+                    submitButton.disabled = false;
+
+                    if (data.error) {
+                        resultDiv.innerHTML = `
+                            <div class="result-card error">
+                                <h3><i class="fas fa-exclamation-triangle"></i> Error</h3>
+                                <p>${data.error}</p>
+                            </div>
+                        `;
+                    } else if (data.rekomendasi_tanaman) {
+                        resultDiv.innerHTML = `
+                            <div class="result-card">
+                                <h3><i class="fas fa-check-circle"></i> Hasil Rekomendasi</h3>
+                                <p><strong>Suhu:</strong> ${data.rata_suhu_c}°C</p>
+                                <p><strong>Kelembapan:</strong> ${data.kelembaban}%</p>
+                                <p><strong>Jenis Tanah:</strong> ${data.jenis_tanah}</p>
+                                <p><strong>Rekomendasi Tanaman:</strong> ${data.rekomendasi_tanaman}</p>
+                            </div>
+                        `;
+                    } else if (data.alternatif_tanaman) {
+                        let alternativeHTML = `
+                            <div class="result-card">
+                                <h3><i class="fas fa-info-circle"></i> Tidak Ada Rekomendasi Tepat</h3>
+                                <p><strong>Suhu:</strong> ${data.rata_suhu_c}°C</p>
+                                <p><strong>Kelembapan:</strong> ${data.kelembaban}%</p>
+                                <p><strong>Jenis Tanah:</strong> ${data.jenis_tanah}</p>
+                            </div>
+                            <h3>Tanaman Alternatif</h3>
+                        `;
+
+                        for (let tanaman in data.alternatif_tanaman) {
+                            const detail = data.alternatif_tanaman[tanaman];
+                            alternativeHTML += `
+                                <div class="result-card">
+                                    <h3><i class="fas fa-tree"></i> ${tanaman}</h3>
+                                    <p><strong>Suhu:</strong> ${detail.suhu_min}°C - ${detail.suhu_max}°C</p>
+                                    <p><strong>Kelembapan:</strong> ${detail.kelembapan_min}% - ${detail.kelembapan_max}%</p>
+                                </div>
+                            `;
+                        }
+                            resultDiv.innerHTML += alternativeHTML;
+                        }
+                        resultDiv.classList.add('show');
+                    }, 1000);
+                });
+            });
+        </script>
+</body>
+</html>
